@@ -1,0 +1,37 @@
+name: Independent open-source PDF app tests (no deployment)
+on:
+  pull_request:
+    paths:
+      - api/**
+      - app-web/**
+      - tests/test_engine.py
+      - docker-compose.starry.yml
+      - .github/workflows/standalone.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  independent-pdf:
+    name: Real independent PDF engine + React build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install open-source PDF engine
+        run: python -m pip install -r api/requirements-dev.txt
+      - name: Test real PDF operations and input validation
+        run: python -m pytest -q tests/test_engine.py
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Build React/TypeScript interface
+        working-directory: app-web
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+      - name: Validate self-hosted containers only
+        run: docker compose -f docker-compose.starry.yml config --quiet
+      - name: Assert no public bind and no deploy command
+        run: |
+          grep -q '127.0.0.1:8090:80' docker-compose.starry.yml
+          ! grep -Ei '(wrangler deploy|cloudflare.*deploy)' .github/workflows/standalone.yml
