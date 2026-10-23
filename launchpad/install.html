@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-Hant"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive"><meta name="theme-color" content="#111827">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/icon.svg">
+<title>繁星 PDF · 文件工具</title>
+<style>
+:root{font-family:system-ui,"Noto Sans TC",sans-serif;color-scheme:dark}
+*{box-sizing:border-box}body{background:linear-gradient(135deg,#1b3559,#0c1422);color:#f8fafc;margin:0;min-height:100vh}
+main{max-width:840px;margin:auto;padding:48px 20px}header{display:flex;align-items:center;gap:12px;margin-bottom:28px}header img{width:50px}
+.panel{border:1px solid #465c78;border-radius:20px;padding:26px;background:#18263a}h1{font-size:30px;margin:0 0 8px}
+p{color:#b2c0d1;line-height:1.6}.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0}
+.tools div{padding:18px 7px;border-radius:12px;text-align:center;background:#263a56;font-size:14px}
+a.button,button{display:block;width:100%;padding:15px;color:#142642;background:#9ec7fe;border:0;border-radius:11px;text-align:center;text-decoration:none;font-size:17px;font-weight:bold;cursor:pointer}
+button{margin-top:12px;background:#334d71;color:white}button[hidden]{display:none}
+small{color:#b2c0d1;display:block;margin-top:23px;line-height:1.6}
+@media(max-width:480px){main{padding:28px 12px}.panel{padding:18px 12px}.tools{gap:6px}.tools div{font-size:12px;padding:16px 2px}}
+</style></head><body><main>
+<header><img src="/icons/icon.svg" alt=""><strong>繁星 PDF · Starry PDF</strong></header>
+<section class="panel"><h1>PDF 萬用工具</h1>
+<p>本機評估版｜手機、電腦與 PWA 架構</p>
+<div class="tools"><div>📑 合併拆分</div><div>🗜️ 壓縮</div><div>🔄 轉換</div><div>✍️ 簽名</div><div>🔍 OCR</div><div>🔒 加密</div></div>
+<a class="button" href="/">開啟 PDF 工具</a><button id="install" type="button" hidden>安裝到主畫面</button>
+<small>這是本機評估版。PDF 工具需先於本機啟動，不提供公開網站。此入口不會離線快取 PDF 文件。手機跨裝置使用仍須完成安全 HTTPS 部署及測試。</small></section>
+</main><script>
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.querySelector('#install').hidden=false});
+document.querySelector('#install').addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.querySelector('#install').hidden=true});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+</script></body></html>

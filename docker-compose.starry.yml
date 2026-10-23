@@ -1,0 +1,25 @@
+# Standalone open-source app. Local evaluation ONLY: not protected for public internet.
+services:
+  pdf-api:
+    build: {context: ., dockerfile: api/Dockerfile}
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    pids_limit: 128
+    networks: [private]
+  starry-web:
+    build: {context: ., dockerfile: app-web/Dockerfile}
+    read_only: true
+    tmpfs:
+      - /tmp:size=96m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on: [pdf-api]
+    ports:
+      - 127.0.0.1:8090:8080
+    networks: [private]
+networks:
+  private: {driver: bridge}

@@ -1,0 +1,7 @@
+# This override is ONLY for isolated GitHub Actions runner tests.
+# The real local compose file keeps security login enabled.
+services:
+  stirling-pdf:
+    environment:
+      SECURITY_ENABLELOGIN: "false"
+      SYSTEM_SHOWSETTINGSWHENNOLOGIN: "false"

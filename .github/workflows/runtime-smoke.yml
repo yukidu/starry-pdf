@@ -1,0 +1,63 @@
+name: Runtime PDF smoke (no deployment)
+
+on:
+  pull_request:
+    paths:
+      - docker-compose.yml
+      - docker-compose.ci.yml
+      - nginx/**
+      - launchpad/**
+      - scripts/smoke_pdf.py
+      - scripts/smoke_security.py
+      - .github/workflows/runtime-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pdf-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actual-pdf-smoke:
+    name: Docker login guard + PDF merge / split / compress
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install integration-test dependencies
+        run: python -m pip install --disable-pip-version-check requests pypdf
+
+      - name: Validate normal and CI-only Docker settings
+        run: |
+          docker compose -f docker-compose.yml config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml config --quiet
+
+      - name: Start normal local instance with login enabled
+        run: docker compose -f docker-compose.yml up -d
+
+      - name: Verify API rejects unauthenticated PDF processing
+        run: python -u scripts/smoke_security.py
+
+      - name: Clean up protected test instance
+        run: docker compose -f docker-compose.yml down --volumes --remove-orphans
+
+      - name: Start isolated no-login instance for API function tests
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+
+      - name: Actually process generated PDF test files
+        run: python -u scripts/smoke_pdf.py
+
+      - name: Show diagnostic container logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color --tail=120
+
+      - name: Clean up local CI containers and volumes
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down --volumes --remove-orphans
