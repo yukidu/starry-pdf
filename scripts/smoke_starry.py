@@ -1,73 +1,79 @@
-"""End-to-end HTTP test against local standalone Starry PDF containers.
-
-Creates blank PDFs in memory. No personal documents or authentication data.
-"""
+"""End-to-end HTTP test for standalone local Starry PDF containers, no user data."""
 import io
 import sys
 import time
 import zipfile
-
 import httpx
 from pypdf import PdfReader, PdfWriter
 
 BASE = "http://127.0.0.1:8090"
 
-def pdf(pages: int) -> bytes:
-    writer = PdfWriter()
+def sample(pages: int) -> bytes:
+    w = PdfWriter()
     for _ in range(pages):
-        writer.add_blank_page(595, 842)
+        w.add_blank_page(595, 842)
     out = io.BytesIO()
-    writer.write(out)
-    writer.close()
+    w.write(out)
+    w.close()
     return out.getvalue()
 
-def wait_until_ready():
-    for _ in range(90):
+def wait_until_ready() -> None:
+    last = ""
+    for n in range(30):
         try:
-            homepage = httpx.get(BASE + "/", timeout=6)
-            health = httpx.get(BASE + "/api/health", timeout=6)
-            if homepage.status_code == 200 and "繁星 PDF" in homepage.text and health.json()["status"] == "ok":
-                print("Starry PDF UI and API are ready", flush=True)
+            homepage = httpx.get(BASE + "/", timeout=5)
+            health = httpx.get(BASE + "/api/health", timeout=5)
+            last = f"home={homepage.status_code} api={health.status_code}"
+            if homepage.status_code == 200 and "繁星 PDF" in homepage.text and health.status_code == 200 and health.json()["status"] == "ok":
+                print("Starry PDF website and API: READY", flush=True)
                 return
-        except Exception:
-            pass
-        time.sleep(3)
-    raise AssertionError("Independent PDF app did not become healthy")
+        except Exception as exc:
+            last = str(exc)[:160]
+        if n % 5 == 0:
+            print(f"Waiting for local website: {last}", flush=True)
+        time.sleep(2)
+    raise AssertionError(f"Standalone PDF site did not become healthy: {last}")
 
-def require_pdf(response: httpx.Response, expected: int):
-    assert response.status_code == 200, (response.status_code, response.text[:200])
+def assert_pdf(response: httpx.Response, pages: int):
+    assert response.status_code == 200, (response.status_code, response.text[:220])
     assert response.headers["content-type"].startswith("application/pdf")
-    assert len(PdfReader(io.BytesIO(response.content)).pages) == expected
+    assert len(PdfReader(io.BytesIO(response.content)).pages) == pages
 
-def test_end_to_end():
+def verify_http() -> None:
     with httpx.Client(timeout=60) as client:
-        one = pdf(1)
-        a = client.post(BASE + "/api/pdf/merge", files=[
-            ("files", ("first.pdf", one, "application/pdf")),
-            ("files", ("second.pdf", one, "application/pdf")),
+        a = sample(1)
+        merged = client.post(BASE + "/api/pdf/merge", files=[
+            ("files", ("first.pdf", a, "application/pdf")),
+            ("files", ("second.pdf", a, "application/pdf")),
         ])
-        require_pdf(a, 2)
-        print("Independent merge API: OK", flush=True)
-        b = client.post(BASE + "/api/pdf/split", data={"pages":"1-2"}, files={"file":("merged.pdf",a.content,"application/pdf")})
-        assert b.status_code == 200, (b.status_code,b.text[:200])
-        with zipfile.ZipFile(io.BytesIO(b.content)) as z:
+        assert_pdf(merged, 2)
+        print("Merged two PDF files: OK", flush=True)
+        split = client.post(BASE + "/api/pdf/split", data={"pages": "1-2"},
+            files={"file": ("merged.pdf", merged.content, "application/pdf")})
+        assert split.status_code == 200, (split.status_code, split.text[:200])
+        with zipfile.ZipFile(io.BytesIO(split.content)) as z:
             assert len(z.namelist()) == 2
-        print("Independent split API: OK", flush=True)
-        c = client.post(BASE + "/api/pdf/rotate", data={"degrees":"90"},files={"file":("x.pdf",a.content,"application/pdf")})
-        require_pdf(c, 2)
-        print("Independent rotate API: OK", flush=True)
-        d = client.post(BASE + "/api/pdf/optimize",files={"file":("x.pdf",a.content,"application/pdf")})
-        require_pdf(d, 2)
-        print("Independent optimize API: OK", flush=True)
-        pwa = client.get(BASE + "/manifest.webmanifest")
-        assert pwa.status_code == 200 and pwa.json()["display"] == "standalone"
+        print("Split into two PDF files: OK", flush=True)
+        rotate = client.post(BASE + "/api/pdf/rotate", data={"degrees": "90"},
+            files={"file": ("merged.pdf", merged.content, "application/pdf")})
+        assert_pdf(rotate, 2)
+        print("Rotated PDF: OK", flush=True)
+        optimize = client.post(BASE + "/api/pdf/optimize",
+            files={"file": ("merged.pdf", merged.content, "application/pdf")})
+        assert_pdf(optimize, 2)
+        print("Optimized PDF: OK", flush=True)
+        manifest = client.get(BASE + "/manifest.webmanifest")
+        assert manifest.status_code == 200 and manifest.json()["display"] == "standalone"
         print("PWA manifest: OK", flush=True)
+        app_bundle = client.get(BASE + "/index.html")
+        assert app_bundle.status_code == 200 and 'id="root"' in app_bundle.text
+        print("React entrypoint: OK", flush=True)
 
 if __name__ == "__main__":
     try:
         wait_until_ready()
-        test_end_to_end()
-        print("Independent open-source PDF app HTTP smoke: PASS")
+        verify_http()
+        print("INDEPENDENT STARRY PDF END-TO-END: PASS", flush=True)
     except Exception as exc:
-        print(f"FAIL: {exc}",file=sys.stderr)
+        print(f"FAIL: {exc}", file=sys.stderr, flush=True)
         sys.exit(1)
