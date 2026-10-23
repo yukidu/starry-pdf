@@ -1,0 +1,19 @@
+{
+  "name": "繁星 PDF｜Starry PDF",
+  "short_name": "繁星 PDF",
+  "description": "私人文件工具",
+  "start_url": "/install",
+  "id": "/install",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101724",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

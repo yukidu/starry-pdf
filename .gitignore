@@ -1,0 +1,15 @@
+stirling-data/
+vendor/
+source-audit.json
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.DS_Store
+__pycache__/
+*.pyc
+.coverage
+.pytest_cache/
