@@ -5,15 +5,16 @@ on:
       - api/**
       - app-web/**
       - tests/test_engine.py
+      - scripts/smoke_starry.py
       - docker-compose.starry.yml
       - .github/workflows/standalone.yml
   workflow_dispatch:
 permissions: {contents: read}
 jobs:
   independent-pdf:
-    name: Real independent PDF engine + React build
+    name: Real independent PDF engine + React build + HTTP integration
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,9 +30,17 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm run build
-      - name: Validate self-hosted containers only
+      - name: Validate self-hosted containers
         run: docker compose -f docker-compose.starry.yml config --quiet
-      - name: Assert no public bind and no deploy command
-        run: |
-          grep -q '127.0.0.1:8090:80' docker-compose.starry.yml
-          ! grep -Ei '(wrangler deploy|cloudflare.*deploy)' .github/workflows/standalone.yml
+      - name: Assert local-only binding
+        run: grep -q '127.0.0.1:8090:80' docker-compose.starry.yml
+      - name: Start standalone PDF app in CI only
+        run: docker compose -f docker-compose.starry.yml up --build -d
+      - name: HTTP test React app and independent PDF API
+        run: python -u scripts/smoke_starry.py
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.starry.yml logs --no-color --tail=120
+      - name: Remove local CI containers
+        if: always()
+        run: docker compose -f docker-compose.starry.yml down --volumes --remove-orphans
