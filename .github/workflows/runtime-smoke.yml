@@ -8,6 +8,7 @@ on:
       - nginx/**
       - launchpad/**
       - scripts/smoke_pdf.py
+      - scripts/smoke_security.py
       - .github/workflows/runtime-smoke.yml
   workflow_dispatch:
 
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   actual-pdf-smoke:
-    name: Docker PDF merge / split / compress
+    name: Docker login guard + PDF merge / split / compress
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -30,19 +31,30 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install smoke-test dependencies (temporary CI only)
+      - name: Install integration-test dependencies
         run: python -m pip install --disable-pip-version-check requests pypdf
 
-      - name: Validate Docker configuration
-        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml config --quiet
+      - name: Validate normal and CI-only Docker settings
+        run: |
+          docker compose -f docker-compose.yml config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml config --quiet
 
-      - name: Start isolated local PDF evaluation
+      - name: Start normal local instance with login enabled
+        run: docker compose -f docker-compose.yml up -d
+
+      - name: Verify API rejects unauthenticated PDF processing
+        run: python -u scripts/smoke_security.py
+
+      - name: Clean up protected test instance
+        run: docker compose -f docker-compose.yml down --volumes --remove-orphans
+
+      - name: Start isolated no-login instance for API function tests
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
 
       - name: Actually process generated PDF test files
         run: python -u scripts/smoke_pdf.py
 
-      - name: Save only diagnostic container logs if failed
+      - name: Show diagnostic container logs on failure
         if: failure()
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color --tail=120
 
