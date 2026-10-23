@@ -33,7 +33,7 @@ jobs:
       - name: Validate self-hosted containers
         run: docker compose -f docker-compose.starry.yml config --quiet
       - name: Assert local-only binding
-        run: grep -q '127.0.0.1:8090:80' docker-compose.starry.yml
+        run: grep -q '127.0.0.1:8090:8080' docker-compose.starry.yml
       - name: Start standalone PDF app in CI only
         run: docker compose -f docker-compose.starry.yml up --build -d
       - name: HTTP test React app and independent PDF API

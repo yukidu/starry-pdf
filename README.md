@@ -1,47 +1,35 @@
 # 繁星 PDF｜Starry PDF
 
-公開 GitHub 開發專案，預計提供 **Web First + PWA** PDF 工具，個人使用，手機與電腦共用。
+**目前尚未部署｜GitHub 公開，正式網站尚未上線。**
 
-**目前：尚未部署。** 本專案的 v0.1 只是本機評估、PWA 入口與授權檢查基礎；尚不是可使用的完整 PDF App。
+繁星 PDF 是獨立的 Web First + PWA PDF 工具專案，使用者目前指定 GitHub 公開、私人使用，先建置與驗收，**完整驗收及再次確認後才准正式部署**。
 
-## 架構與安全界線
+## v0.2 獨立版本（開發中）
+以 React + TypeScript + Vite 建立前端，以 FastAPI + [pypdf](https://github.com/py-pdf/pypdf) 建立獨立開源 PDF 處理後端，沒有複製 Stirling PDF 受限授權的引擎。首批功能：
+- 合併 PDF
+- 拆分 PDF
+- 旋轉 PDF
+- 內容壓縮（不保證檔案一定變小）
 
-- 公開的是程式碼；**個人 PDF、使用紀錄、簽章、帳密、金鑰不得上傳 GitHub**。
-- 獨立 GitHub 倉庫，不修改其他 Starry / H-Global 專案。
-- 先以 [Stirling PDF](https://github.com/Stirling-Tools/Stirling-PDF) 官方 v3.2.1 映像進行 **本機評估**，但不表示已獲得複製其獨立授權程式的許可。
-- Stirling PDF v3.2.1 的根目錄 MIT License **不包含**部分獨立授權原始碼；請見 `LICENSE-UPSTREAM.txt` 和 `scripts/prepare_source.py`。
-- 此 repo **沒有完整 Stirling PDF 引擎**；取得開源快照之後仍須確認其可否單獨建置及功能完整性。
+**本機測試（需 Docker Desktop）**
 
-## 本機評估（不對外開放）
-
-需安裝 Docker Desktop：
-
-```bash
-docker compose up -d
+```sh
+docker compose -f docker-compose.starry.yml up --build -d
 ```
 
-在同一台電腦開啟 `http://localhost:8088/install`。停止服務：`docker compose down`。
+同一台電腦開啟 http://127.0.0.1:8090 。
+停止：`docker compose -f docker-compose.starry.yml down`。
 
-- 8088 僅綁定本機 `127.0.0.1`，不應直接開放到網際網路。
-- 首次登入時應參考 Stirling PDF 官方設定，立即變更任何預設密碼。
-- 官方容器的使用受到其自身授權條款限制；此階段僅供本機合法評估，不對外部署。
-- 想在手機安裝／跨裝置存取，需要 HTTPS 與額外登入保護，目前**尚未完成**。
+API 不儲存個人文件，但**此本機版本沒有網際網路登入驗證，禁止將 8090 開放到公網**。正式部署前必須增加外部存取驗證、隱私防護及容量測試。詳細內容見 [STANDALONE.md](STANDALONE.md)。
 
-## 原始碼授權審查
+## 上游 Stirling PDF 評估
+原始碼來源：[Stirling PDF](https://github.com/Stirling-Tools/Stirling-PDF)；v3.2.1 不是全部 MIT，部分子目錄明確另行授權（含 engine）。舊的 `docker-compose.yml` 是**原廠容器本機評估專用**，**不能當成可自由複製的完整引擎**。詳見 `LICENSE-UPSTREAM.txt` 及 `scripts/prepare_source.py`。
 
-```bash
-python3 scripts/prepare_source.py
-python3 -m unittest discover -s tests -v
-```
+## GitHub 開發與測試
+- Draft PR： https://github.com/yukidu/starry-pdf/pull/1
+- 分支：`feat/initial-pdf-scaffold-20261023`
+- 對獨立開源版執行 12 項 PDF 核心測試、React TypeScript 建置、Docker 啟動及實際 HTTP 連線測試。
+- CI 只測試，**不會執行 Cloudflare Production Deploy**。
 
-腳本會確認官方版本 commit 和排除獨立授權目錄，授權異動時會停止。生成 `vendor/` 前必須再審查第三方依賴，請勿直接將完整原始碼當成全 MIT。
-
-## 驗收與部署
-
-1. 本機靜態檢查（CI）。
-2. 取得並查核合法可複製的原始碼。
-3. Docker 啟動與合併、拆分、壓縮、簽名、OCR、手機 PWA 功能實測。
-4. 評估 Cloudflare Containers 成本及權限／文件隔離。
-5. 經使用者看過預覽並另行同意後，才進行 Cloudflare 正式部署。
-
-**狀態：正式上線尚未授權；GitHub 公開並不代表網站公開部署。**
+## 仍未完成
+更多 PDF 工具、OCR、簽名、轉檔、手機實機 PWA 驗收、正式登入、雲端部署與安全容量測試。公開的是程式碼，**請勿將 PDF、帳密、API 金鑰或私人資料放進 GitHub**。

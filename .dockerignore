@@ -1,0 +1,14 @@
+**/.git
+**/node_modules
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.venv
+**/*.pyc
+vendor
+stirling-data
+source-audit.json
+.env
+.env.*
+*.pdf
+*.zip
